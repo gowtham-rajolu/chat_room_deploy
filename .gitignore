@@ -1,0 +1,45 @@
+# Node modules
+/node_modules
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Build and cache
+/.next
+/dist
+/build
+.cache
+.turbo
+coverage
+
+# IDE/settings
+.vscode
+.idea
+*.swp
+
+# npm
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Typescript build files
+*.tsbuildinfo
+
+# Misc
+*.cache
