@@ -8,7 +8,7 @@
 <button onclick="login()">Login</button>
 
 <p id="error" style="color:red;"></p>
-<h3>no account <a href="register.html">Register here</a></h3>
+<h3>no account <a href="#" onclick="register()">Register here</a></h3>
 <script>
 async function login() {
   const res = await fetch("/api/login", {
@@ -28,6 +28,9 @@ async function login() {
   } else {
     document.getElementById("error").innerText = data.msg;
   }
+}
+async function register(){
+    window.location.href = "/register";
 }
 </script>
 </body>

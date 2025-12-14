@@ -7,7 +7,7 @@
 <input id="email" placeholder="Email" />
 <input id="password" type="password" placeholder="Password" />
 <button onclick="register()">Register</button>
-
+<h3>already have an account <a href="#" onclick="login()">login here</a></h3>
 <script>
 async function register() {
   const res = await fetch("/api/register", {
@@ -23,6 +23,10 @@ async function register() {
   if (res.ok) {
     window.location.href = "/login";
   }
+}
+async function login()
+{
+    window.location.href = "/login";
 }
 </script>
 </body>
