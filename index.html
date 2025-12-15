@@ -1,56 +1,55 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Socket Chat</title>
+  <title>Chat</title>
   <style>
-    body { margin: 0; padding: 0 0 60px 0; font-family: Arial, sans-serif; }
-    ul { list-style-type: none; margin: 0; padding: 10px; }
-    li { margin-bottom: 8px; padding: 8px; background: #e8e8e8; border-radius: 6px; }
-    form { position: fixed; bottom: 0; width: 100%; background: white; padding: 10px; display: flex; gap: 10px; }
+    body { font-family: Arial; margin: 0; padding-bottom: 60px; }
+    ul { list-style: none; padding: 10px; }
+    li { margin-bottom: 8px; padding: 8px; background: #eee; border-radius: 6px; }
+    form { position: fixed; bottom: 0; width: 100%; display: flex; gap: 10px; padding: 10px; background: white; }
     input { flex: 1; padding: 12px; }
-    button { width: 100px; padding: 12px; background: black; color: white; border: none; font-size: 16px; }
+    button { width: 100px; }
   </style>
 </head>
-
 <body>
-  <ul id="messages"></ul>
 
-  <form id="form">
-    <input id="input" autocomplete="off" placeholder="Type message..." />
-    <button>Send</button>
-  </form>
+<ul id="messages"></ul>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const name = prompt("Enter your name:");
-    const socket = io();
+<form id="form">
+  <input id="input" autocomplete="off" placeholder="Type message..." />
+  <button>Send</button>
+</form>
 
-    const form = document.getElementById("form");
-    const input = document.getElementById("input");
-    const messages = document.getElementById("messages");
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  // token returned from login API (stored for sockets)
+  const token = localStorage.getItem("token");
 
-    socket.on("load messages", (msgs) => {
-      msgs.forEach((msg) => appendMessage(msg));
-    });
+  const socket = io({
+    auth: { token }
+  });
 
-    socket.on("chat message", (msg) => {
-      appendMessage(msg);
-      window.scrollTo(0, document.body.scrollHeight);
-    });
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const messages = document.getElementById("messages");
 
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      if (input.value.trim()) {
-        socket.emit("chat message", { Name: name, content: input.value });
-        input.value = "";
-      }
-    });
+  socket.on("load messages", msgs => msgs.forEach(addMessage));
+  socket.on("chat message", addMessage);
 
-    function appendMessage(msg) {
-      const item = document.createElement("li");
-      item.textContent = `${msg.Name}: ${msg.content} (${new Date(msg.timeStamp).toLocaleTimeString()})`;
-      messages.appendChild(item);
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    if (input.value.trim()) {
+      socket.emit("chat message", input.value);
+      input.value = "";
     }
-  </script>
+  });
+
+  function addMessage(msg) {
+    const li = document.createElement("li");
+    li.textContent =
+      `${msg.name}: ${msg.content} (${new Date(msg.timeStamp).toLocaleTimeString()})`;
+    messages.appendChild(li);
+  }
+</script>
 </body>
 </html>

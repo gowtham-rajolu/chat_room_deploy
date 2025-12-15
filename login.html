@@ -3,12 +3,10 @@
 <body>
 <h2>Login</h2>
 
-<input id="email" placeholder="Email" />
-<input id="password" type="password" placeholder="Password" />
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
 
-<p id="error" style="color:red;"></p>
-<h3>no account <a href="#" onclick="register()">Register here</a></h3>
 <script>
 async function login() {
   const res = await fetch("/api/login", {
@@ -21,16 +19,8 @@ async function login() {
   });
 
   const data = await res.json();
-
-  if (res.ok) {
-    // ✅ JWT cookie already set by backend
-    window.location.href = "/";
-  } else {
-    document.getElementById("error").innerText = data.msg;
-  }
-}
-async function register(){
-    window.location.href = "/register";
+  localStorage.setItem("token", data.token); // 🔥 for socket
+  window.location.href = "/";
 }
 </script>
 </body>
