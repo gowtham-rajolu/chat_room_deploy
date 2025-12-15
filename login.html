@@ -1,29 +1,161 @@
 <!DOCTYPE html>
-<html>
-<body>
-<h2>Login</h2>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login</title>
 
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
-<p>Don't have an account <a href="/register"">create</a></p>
-<script>
-async function login() {
-  const res = await fetch("/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: email.value,
-      password: password.value
-    })
-  });
-function register(){
-    window.location.href = "/register";
-  }
-  const data = await res.json();
-  localStorage.setItem("Token", data.token); // 🔥 for socket
-  window.location.href = "/";
-}
-</script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+
+    .card {
+      background: white;
+      width: 380px;
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      margin: 0 0 20px;
+      text-align: center;
+      color: #333;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input:focus {
+      border-color: #667eea;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #667eea;
+      color: white;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      background: #5a6fd8;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .error {
+      margin-top: 12px;
+      color: #d93025;
+      font-size: 14px;
+      text-align: center;
+      display: none;
+    }
+
+    .footer {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .footer a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h2>Gowtham's Chat-Room</h2>
+
+    <div class="input-group">
+      <input id="email" type="email" placeholder="Email" />
+    </div>
+
+    <div class="input-group">
+      <input id="password" type="password" placeholder="Password" />
+    </div>
+
+    <button onclick="login()">Login</button>
+
+    <div id="error" class="error"></div>
+
+    <div class="footer">
+      Don’t have an account?
+      <a href="/register">Create one</a>
+    </div>
+  </div>
+
+  <script>
+    async function login() {
+      const errorBox = document.getElementById("error");
+      errorBox.style.display = "none";
+
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.value.trim(),
+          password: password.value
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        errorBox.innerText = data.msg || "Login failed";
+        errorBox.style.display = "block";
+        return;
+      }
+
+      // Store token for Socket.IO
+      localStorage.setItem("Token", data.token);
+
+      // Redirect to chat
+      window.location.href = "/";
+    }
+  </script>
 </body>
 </html>

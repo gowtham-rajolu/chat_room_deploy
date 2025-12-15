@@ -64,10 +64,21 @@ app.get("/register", (req, res) => {
 /* ---------- REGISTER ---------- */
 app.post("/api/register", async (req, res) => {
   const { name, email, password } = req.body;
+
+  // ✅ Check if email already exists
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return res.status(409).json({
+      msg: "Email already registered"
+    });
+  }
+
   const hashed = await bcrypt.hash(password, 10);
   await User.create({ name, email, password: hashed });
-  res.json({ msg: "Registered" });
+
+  res.json({ msg: "Registered successfully" });
 });
+
 app.get("/logout", (req, res) => {
   res.clearCookie("Token");
   res.send(`
