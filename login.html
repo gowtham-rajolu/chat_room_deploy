@@ -21,7 +21,7 @@ function register(){
     window.location.href = "/register";
   }
   const data = await res.json();
-  localStorage.setItem("token", data.token); // 🔥 for socket
+  localStorage.setItem("Token", data.token); // 🔥 for socket
   window.location.href = "/";
 }
 </script>

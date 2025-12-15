@@ -16,7 +16,7 @@
 <ul id="messages"></ul>
 
 <form id="form">
-  <input id="input" autocomplete="off" placeholder="Type message..." />
+  <input id="input" autocomplete="on" placeholder="Type message..." />
   <button>Send</button>
 </form>
 
@@ -24,7 +24,7 @@
 <script>
   
   // token returned from login API (stored for sockets)
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("Token");
 
   const socket = io({
     auth: { token }
@@ -36,7 +36,17 @@
 
   socket.on("load messages", msgs => msgs.forEach(addMessage));
   socket.on("chat message", addMessage);
+  socket.on("connect_error", (err) => {
+  console.error("Socket error:", err.message);
 
+  if (err.message === "NO_TOKEN" || err.message === "INVALID_TOKEN") {
+    // cleanup
+    localStorage.removeItem("token");
+
+    // redirect
+    window.location.href = "/login";
+  }
+});
   form.addEventListener("submit", e => {
     e.preventDefault();
     if (input.value.trim()) {

@@ -64,7 +64,6 @@ app.get("/register", (req, res) => {
 /* ---------- REGISTER ---------- */
 app.post("/api/register", async (req, res) => {
   const { name, email, password } = req.body;
-  console.log(req.body)
   const hashed = await bcrypt.hash(password, 10);
   await User.create({ name, email, password: hashed });
   res.json({ msg: "Registered" });
@@ -73,7 +72,7 @@ app.get("/logout", (req, res) => {
   res.clearCookie("Token");
   res.send(`
     <script>
-      localStorage.removeItem("token");
+      localStorage.removeItem("Token");
       window.location.href = "/login";
     </script>
   `);
@@ -97,7 +96,8 @@ app.post("/api/login", async (req, res) => {
   // Cookie for HTTP routes
   res.cookie("Token", token, {
     httpOnly: true,
-    sameSite: "lax"
+    secure:true,
+    sameSite: "strict"
   });
 
   // ALSO return token for Socket.IO
@@ -113,7 +113,7 @@ io.use((socket, next) => {
     socket.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
   } catch {
-    next(new Error("Unauthorized"));
+    return next(new Error("Unauthorized"));
   }
 });
 
