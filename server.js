@@ -69,6 +69,15 @@ app.post("/api/register", async (req, res) => {
   await User.create({ name, email, password: hashed });
   res.json({ msg: "Registered" });
 });
+app.get("/logout", (req, res) => {
+  res.clearCookie("Token");
+  res.send(`
+    <script>
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    </script>
+  `);
+});
 
 /* ---------- LOGIN ---------- */
 app.post("/api/login", async (req, res) => {
