@@ -64,6 +64,7 @@ app.get("/register", (req, res) => {
 /* ---------- REGISTER ---------- */
 app.post("/api/register", async (req, res) => {
   const { name, email, password } = req.body;
+  console.log(req.body)
   const hashed = await bcrypt.hash(password, 10);
   await User.create({ name, email, password: hashed });
   res.json({ msg: "Registered" });

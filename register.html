@@ -3,7 +3,7 @@
 <body>
 <h2>Register</h2>
 
-<input id="name" placeholder="Name" />
+<input id="username" placeholder="Name" />
 <input id="email" placeholder="Email" />
 <input id="password" type="password" placeholder="Password" />
 <button onclick="register()">Register</button>
@@ -14,7 +14,7 @@ async function register() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      name: name.value,
+      name: username.value,
       email: email.value,
       password: password.value
     })
