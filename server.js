@@ -6,6 +6,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const nodemailer = require("nodemailer");
 require("dotenv").config();
 
 /* ---------------- APP INIT ---------------- */
@@ -14,11 +15,22 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 
 /* ---------------- DB ---------------- */
-mongoose.connect(process.env.MONGO_URI);
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.error(err));
+
+/* ---------------- MAILER ---------------- */
+const mailer = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASS
+  }
+});
 
 /* ---------------- SCHEMAS ---------------- */
 const messageSchema = new mongoose.Schema({
@@ -31,7 +43,8 @@ const Message = mongoose.model("Message", messageSchema);
 const userSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true },
-  password: String
+  password: String,
+  isVerified: { type: Boolean, default: false }
 });
 const User = mongoose.model("User", userSchema);
 
@@ -48,7 +61,7 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-/* ---------------- ROUTES ---------------- */
+/* ---------------- ROUTES (STATIC) ---------------- */
 app.get("/", authMiddleware, (req, res) => {
   res.sendFile(__dirname + "/index.html");
 });
@@ -61,39 +74,68 @@ app.get("/register", (req, res) => {
   res.sendFile(__dirname + "/register.html");
 });
 
-/* ---------- REGISTER ---------- */
+/* ---------------- REGISTER + EMAIL VERIFY ---------------- */
 app.post("/api/register", async (req, res) => {
   const { name, email, password } = req.body;
 
-  // ✅ Check if email already exists
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return res.status(409).json({
-      msg: "Email already registered"
-    });
+  const exists = await User.findOne({ email });
+  if (exists) {
+    return res.status(409).json({ msg: "Email already registered" });
   }
 
   const hashed = await bcrypt.hash(password, 10);
-  await User.create({ name, email, password: hashed });
+  const user = await User.create({
+    name,
+    email,
+    password: hashed,
+    isVerified: false
+  });
 
-  res.json({ msg: "Registered successfully" });
+  const emailToken = jwt.sign(
+    { id: user._id },
+    process.env.EMAIL_JWT_SECRET,
+    { expiresIn: "15m" }
+  );
+
+  const link = `${process.env.CLIENT_URL}/verify-email?token=${emailToken}`;
+
+  await mailer.sendMail({
+    from: process.env.GMAIL_USER,
+    to: email,
+    subject: "Verify your email",
+    html: `
+      <h3>Email Verification</h3>
+      <p>Click below to verify:</p>
+      <a href="${link}">Verify Email</a>
+    `
+  });
+
+  res.json({ msg: "Registered. Check email to verify." });
 });
 
-app.get("/logout", (req, res) => {
-  res.clearCookie("Token");
-  res.send(`
-    <script>
-      localStorage.removeItem("Token");
-      window.location.href = "/login";
-    </script>
-  `);
+/* ---------------- VERIFY EMAIL ---------------- */
+app.get("/verify-email", async (req, res) => {
+  try {
+    const decoded = jwt.verify(
+      req.query.token,
+      process.env.EMAIL_JWT_SECRET
+    );
+
+    await User.findByIdAndUpdate(decoded.id, { isVerified: true });
+    res.send("Email verified successfully. You can login now.");
+  } catch {
+    res.status(400).send("Invalid or expired link");
+  }
 });
 
-/* ---------- LOGIN ---------- */
+/* ---------------- LOGIN ---------------- */
 app.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
+
   if (!user) return res.status(400).json({ msg: "User not found" });
+  if (!user.isVerified)
+    return res.status(403).json({ msg: "Verify your email first" });
 
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return res.status(401).json({ msg: "Wrong password" });
@@ -101,21 +143,76 @@ app.post("/api/login", async (req, res) => {
   const token = jwt.sign(
     { id: user._id, name: user.name },
     process.env.JWT_SECRET,
-    { expiresIn: "15m" } // short-lived
+    { expiresIn: "15m" }
   );
 
-  // Cookie for HTTP routes
   res.cookie("Token", token, {
     httpOnly: true,
-    secure:true,
+    secure: true,
     sameSite: "strict"
   });
 
-  // ALSO return token for Socket.IO
   res.json({ token });
 });
 
-/* ---------------- SOCKET AUTH (JWT) ---------------- */
+/* ---------------- LOGOUT ---------------- */
+app.get("/logout", (req, res) => {
+  res.clearCookie("Token");
+  res.send(`
+    <script>
+      localStorage.removeItem("Token");
+      window.location.href="/login";
+    </script>
+  `);
+});
+
+/* ---------------- FORGOT PASSWORD ---------------- */
+app.post("/api/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+
+  if (!user) return res.json({ msg: "If user exists, mail sent" });
+
+  const token = jwt.sign(
+    { id: user._id },
+    process.env.EMAIL_JWT_SECRET,
+    { expiresIn: "5m" }
+  );
+
+  const link = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+
+  await mailer.sendMail({
+    from: process.env.GMAIL_USER,
+    to: email,
+    subject: "Reset Password",
+    html: `
+      <h3>Password Reset</h3>
+      <a href="${link}">Reset Password</a>
+    `
+  });
+
+  res.json({ msg: "Reset link sent" });
+});
+
+/* ---------------- RESET PASSWORD ---------------- */
+app.get("/reset-password",(req,res)=>{
+  res.sendFile(__dirname+"/reset-password.html")
+})
+app.post("/api/reset-password", async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  try {
+    const decoded = jwt.verify(token, process.env.EMAIL_JWT_SECRET);
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await User.findByIdAndUpdate(decoded.id, { password: hashed });
+    res.json({ msg: "Password reset successful" });
+  } catch {
+    res.status(400).json({ msg: "Invalid or expired token" });
+  }
+});
+
+/* ---------------- SOCKET AUTH ---------------- */
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
   if (!token) return next(new Error("No token"));
@@ -124,7 +221,7 @@ io.use((socket, next) => {
     socket.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
   } catch {
-    return next(new Error("Unauthorized"));
+    next(new Error("Unauthorized"));
   }
 });
 
@@ -137,7 +234,7 @@ io.on("connection", async (socket) => {
 
   socket.on("chat message", async (text) => {
     const message = await Message.create({
-      name: socket.user.name,   // ✅ FROM TOKEN
+      name: socket.user.name,
       content: text
     });
     io.emit("chat message", message);
@@ -145,6 +242,6 @@ io.on("connection", async (socket) => {
 });
 
 /* ---------------- START ---------------- */
-server.listen(process.env.PORT || 3000, () =>
-  console.log("Server running")
-);
+server.listen(process.env.PORT || 3000, () => {
+  console.log("Server running");
+});

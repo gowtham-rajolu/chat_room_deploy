@@ -152,6 +152,9 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    const notifySound = new Audio("/mixkit-long-pop-2358.wav");
+  notifySound.volume = 0.6;
+
     const token = localStorage.getItem("Token");
 
     const socket = io({
@@ -181,6 +184,8 @@
     });
 
     function addMessage(msg) {
+      notifySound.currentTime = 0; // rewind
+    notifySound.play().catch(() => {});
       const div = document.createElement("div");
       const isSelf = false; // server decides identity
 

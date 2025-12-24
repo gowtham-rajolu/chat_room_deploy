@@ -26,6 +26,7 @@
       border-radius: 14px;
       box-shadow: 0 20px 40px rgba(0,0,0,0.15);
       animation: fadeIn 0.6s ease;
+      z-index: 1;
     }
 
     @keyframes fadeIn {
@@ -50,7 +51,6 @@
       border-radius: 8px;
       border: 1px solid #ccc;
       outline: none;
-      transition: border 0.2s;
     }
 
     input:focus {
@@ -68,15 +68,10 @@
       cursor: pointer;
       background: #667eea;
       color: white;
-      transition: background 0.2s, transform 0.1s;
     }
 
     button:hover {
       background: #5a6fd8;
-    }
-
-    button:active {
-      transform: scale(0.98);
     }
 
     .error {
@@ -98,24 +93,50 @@
       color: #667eea;
       text-decoration: none;
       font-weight: 600;
+      cursor: pointer;
     }
 
-    .footer a:hover {
-      text-decoration: underline;
+    /* ---------- FULL PAGE LOADER ---------- */
+    .page-loader {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    .page-loader.hidden {
+      display: none;
+    }
+
+    .spinner {
+      width: 45px;
+      height: 45px;
+      border: 4px solid #ddd;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 
 <body>
+
   <div class="card">
     <h2>Gowtham's Chat-Room</h2>
 
     <div class="input-group">
-      <input id="email" type="email" placeholder="Email" />
+      <input id="email" type="email" placeholder="Email" autocomplete="username" />
     </div>
 
     <div class="input-group">
-      <input id="password" type="password" placeholder="Password" />
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
     </div>
 
     <button onclick="login()">Login</button>
@@ -124,37 +145,78 @@
 
     <div class="footer">
       Don’t have an account?
-      <a href="/register">Create one</a>
+      <a href="/register">Create one</a><br/>
+      <a onclick="forgot()">Forgot Password?</a>
     </div>
   </div>
 
+  <!-- FULL PAGE LOADER -->
+  <div id="pageLoader" class="page-loader hidden">
+    <div class="spinner"></div>
+  </div>
+
   <script>
+    function showLoader() {
+      document.getElementById("pageLoader").classList.remove("hidden");
+    }
+
+    function hideLoader() {
+      document.getElementById("pageLoader").classList.add("hidden");
+    }
+
     async function login() {
       const errorBox = document.getElementById("error");
       errorBox.style.display = "none";
 
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.value.trim(),
-          password: password.value
-        })
-      });
+      showLoader();
 
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email.value.trim(),
+            password: password.value
+          })
+        });
 
-      if (!res.ok) {
-        errorBox.innerText = data.msg || "Login failed";
+        const data = await res.json();
+
+        if (!res.ok) {
+          hideLoader();
+          errorBox.innerText = data.msg || "Login failed";
+          errorBox.style.display = "block";
+          return;
+        }
+
+        localStorage.setItem("Token", data.token);
+        window.location.href = "/";
+      } catch {
+        hideLoader();
+        errorBox.innerText = "Network error";
         errorBox.style.display = "block";
+      }
+    }
+
+    function forgot() {
+      const mail = email.value.trim();
+
+      if (!mail) {
+        alert("Please enter your email first");
         return;
       }
 
-      // Store token for Socket.IO
-      localStorage.setItem("Token", data.token);
+      showLoader();
 
-      // Redirect to chat
-      window.location.href = "/";
+      fetch("/api/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: mail })
+      })
+      .then(r => r.json())
+      .then(d => alert(d.msg))
+      .catch(() => alert("Something went wrong"))
+      .finally(() => hideLoader());
     }
   </script>
 </body>
