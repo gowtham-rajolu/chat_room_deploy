@@ -94,7 +94,7 @@ app.post("/api/register", async (req, res) => {
   const emailToken = jwt.sign(
     { id: user._id },
     process.env.EMAIL_JWT_SECRET,
-    { expiresIn: "15m" }
+    { expiresIn: "5m" }
   );
 
   const link = `${process.env.CLIENT_URL}/verify-email?token=${emailToken}`;
@@ -243,5 +243,5 @@ io.on("connection", async (socket) => {
 
 /* ---------------- START ---------------- */
 server.listen(process.env.PORT || 3000, () => {
-  console.log("Server running");
+  console.log("Server running",process.env.PORT || 3000);
 });
